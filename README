@@ -1,0 +1,69 @@
+.:  Hough Circle Detection :. 
+
+.:  Alex Conway  :.    
+
+.:  SOLUTION OVERVIEW  :.
+The approach I took was to implement a hough feature detector to detect circles of arbitrary size 
+in an input image of any size using the following procedure (please see details and references 
+in code comments):
+
+1. Grey-scale the input image using a weighted average of RGB values 
+
+2. Convert grey-scale image to a binary image by thresholding (threshold value can be changed 
+via slider but defaults to hand-picked optimum)
+
+3. Run Sobel edge and gradient filters, using the gradient to reduce the edge thickness
+
+4. Create 3D Hough Space for all radii up to the width/2 at 2px increments with a border at 20% 
+width to allow for circles whose centers are outside of the original image's bounds
+
+5. Identify regions in Hough Space above a threshold as 'candidate circles'
+
+6. Remove invalid circles by sorting candidates on 'intensity' (number of votes in Hough Space)
+descending and removing circles that fall within candidate circles with higher intensity
+
+7. Some false positives remained so after inspection, I realized the rate of change across slices
+(different radii) of the Hough space is different for true circles vs. false matches. I checked the 
+rate of change of intensity at a given pixel (different radii) both 2 slices above and 2 slices below
+the given candidate circle. If the difference is not large enough, the circle is a false positive.
+All false positives were removed and only the remaining circles were the solution
+
+8. Paint detected cirlces over original image
+
+
+
+.:  REMARKS  :.
+=================================================
+This project was A LOT of fun! It was also VERY challenging, but I am really happy with how it 
+turned out... 
+
+I implemented a number of efficient data structures including a sparse edge list so that 
+the circles in the accumulator are filled per edge rather than needing to find the edges in the 
+edge image for each slice of the accumulator. 
+
+I also found a significant improvement in performance by using flattened 1D arrays for the 
+accumulator and painting steps. Was tricky at first but led to significant improvement in speed.
+
+I struggled with false positives for way too many hours until I realized I needed to sort candidate 
+matches on descending intensity and invalidate circles that fall within those with higher intensity.
+I recall Dr. Marais saying something to this effect but didn't see it described in any other resources.
+
+The final important optimization to resolve false positives was the rate of intensity check described 
+above which finally got me to perfect performance on the given images. I hope the performance is
+as good on unseen images! 
+
+
+.:  FUTURE WORK  :.
+==============================================
+1. Implement non-maximal suppression and full Canny detector
+
+2. Implement Gaussian blur to allow detection of circles in any image, not just
+those similar to the test image
+
+3. Implement parallelized accumulator search in threads to speed up computation
+
+4. Show plot of accumulator intensity at given pixel across all slices (radii) 
+
+Thank you! 
+
+:)  :)  :)  :)  :)  :)  :)  :)  :)  :)  :)  :)  :)  :)  :)  :)  ;)

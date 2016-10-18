@@ -1,0 +1,219 @@
+<!doctype html>
+<html class="no-js" lang="en">
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hough Circle Detection</title>
+    <!--CSS -->
+    <link rel="stylesheet" href="style/style.css" />
+    <link rel="stylesheet" href="style/dc.css" />
+    <link rel="stylesheet" href="style/bootstrap.min.css" />
+    <link rel="stylesheet" href="style/nouislider.min.css" />
+    <!-- PRE SCRIPTS -->
+    <script src="js/d3.v3.min.js" defer></script>
+    <script src="js/crossfilter.v1.min.js" defer></script>
+    <!--LiveReload.js-->
+    <script>
+    document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')
+    </script>
+</head>
+
+<body>
+    <nav class="navbar  navbar-custom navbar-light navbar-fixed-top">
+        <div class="container" style="margin-top:10px; border-bottom: 1px solid black;">
+            <div class="nav navbar-nav navbar-left">
+                <div id="logospan">AI</div>
+                <div class="ds">Hough Circle Detection</div>
+                <!--  -->
+                <!--  -->
+                <!-- IMAGE PICKER -->
+                <!--  -->
+                <div id='image_picker_container'>
+                    <form action='#' onsubmit="return false;" class='btn btn-default nohover' />
+                    <input type='file' id='img_picker'>
+                    <input type='button' id='img_picker_button' value='Load' onclick='loadImage();' />
+                    </form>
+                </div>
+            </div>
+            <div class="nav navbar-nav navbar-right">
+                <div style="margin:4px 14px;">Alex Conway</div>
+            </div>
+    </nav>
+    <!--  -->
+    <div class="container">
+        <div class="row">
+            <div class="container_vis">
+                <div id="loaded">
+                    <!-- CANVAS OBJECTS -->
+                    <div class="canvas_cc">
+                        <div>
+                            <canvas id="img_canvas"></canvas>
+                        </div>
+                        <div>
+                            <canvas id="binary_canvas"></canvas>
+                        </div>
+                        <div class="canvas_inner">
+                            <canvas id="edges_canvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="canvas_cc">
+                        <div>
+                            <canvas id="accumulator_canvas"></canvas>
+                        </div>
+                        <div class="canvas_inner">
+                            <canvas id="max_canvas"></canvas>
+                        </div>
+                    </div>
+                    <!-- / -->
+                    <!-- UI -->
+                    <div class="ui">
+                        <div style="text-align:center; width:300px;">
+                            <div id='found'></div>
+                            <div id='status'>:)</div>
+                        </div>
+                        <!-- Slider: Threshold -->
+                        <div style="margin-left: 15px;">
+                            <div class="slider_container">
+                                <div class='explain' style="margin-top:55px; margin-bottom:5px;">The 3 sliders below are used in the hough transform process to detect circles. They have been set at optimal levels but try moving them around...</div>
+                                <div style="margin-top: 5px;"><span class="slider_label">THRESHOLD </span><span id="slider_threshold_description" class="slider_description"></span></div>
+                                <div id="slider_threshold_widget" class="slider"></div>
+                            </div>
+                            <!-- Slider: Max Radius -->
+                            <div class="slider_container">
+                                <div><span class="slider_label">MAX RADIUS </span><span id="slider_rmax_description" class="slider_description"></span></div>
+                                <div id="slider_rmax_widget" class="slider"></div>
+                            </div>
+                            <!-- Slider: Accumulator Cutoff  -->
+                            <div class="slider_container">
+                                <div><span class="slider_label">ACCUMULATOR CUTOFF </span><span id="slider_cutoff_description" class="slider_description"></span></div>
+                                <div id="slider_cutoff_widget" class="slider"></div>
+                            </div>
+                            <!-- Slider: Accumulator Slice Radius -->
+                            <div class="slider_container" style="margin-top:60px;">
+                                <div class='explain' style="margin-bottom:10px;">Use the slider below to move though various "slices" (radius levels) of the 3D accumulator...</div>
+                                <div><span class="slider_label">ACCUMULATOR SLICE </span><span id="slider_radius_description" class="slider_description"></span></div>
+                                <div id="slider_radius_widget" class="slider"></div>
+                            </div>
+                        </div>
+                        <!--  -->
+                        <div style="width:300px; margin-top:50px;">
+                            <div class="toggles_left" style="float:left;">
+                                <span class="slider_label">LEFT CANVAS</span>
+                                <div class='toggle toggle_active' id='toggle_image' onclick='toggleActive()'>Image + Circles</div>
+                                <div class='toggle' id='toggle_edges' onclick='toggleEdges()'>Detected Edges</div>
+                            </div>
+                            <div class="toggles_right" style=" float:right;">
+                                <span class="slider_label">RIGHT CANVAS</span>
+                                <div class='toggle toggle_active' id='toggle_slice' onclick='toggleSlice()'>Accumulator Slice</div>
+                                <div class='toggle' id='toggle_max' onclick='toggleMax()'>Max Accumulator</div>
+                            </div>
+                        </div>
+                        <!--  -->
+                    </div>
+                    <div class="found_circles_cc">
+                        <div class="slider_label" style="font-size: 16px !important;">CIRCLES FOUND</div>
+                        <span id="found_circles"></span>
+                    </div>
+                    <!-- README -->
+                    <div class= "readme">
+                      <div class="slider_label" style="font-size: 16px !important;">README</div>
+<p>:) :) :) :) :) :) :) :) :) :) :) :) :) :) :) :) ;)</p>
+
+<p>.: HOW TO RUN :.<br />
+<p>The program is really just a single page website with the core computer vision code <br />
+in '_icv.js'.</p>
+
+<p>To run, just open 'icv.html' in a browser. It definitely works in Chrome and Firefox and <br />
+hopefully your browser too :)</p>
+
+<p>Once the page is opened, select &quot;Choose File&quot; and upload the test image (or use a <br />
+test image from the /testimages/ directory)...</p>
+
+<p>.: SOLUTION OVERVIEW :.<br />
+The solution proceeds as follows:</p>
+
+<p>1. Grey-scale the input image using a weighted average of RGB values </p>
+
+<p>2. Convert grey-scale image to a binary image by thresholding (threshold value can be changed <br />
+via slider but defaults to hand-picked optimum)</p>
+
+<p>3. Run Sobel edge and gradient filters, using the gradient to reduce the edge thickness</p>
+
+<p>4. Create 3D Hough Space for all radii up to the width/2 at 2px increments with a border at 20% <br />
+width to allow for circles whose centers are outside of the original image's bounds</p>
+
+<p>5. Identify regions in Hough Space above a threshold as 'candidate circles'</p>
+
+<p>6. Remove invalid circles by sorting candidates on 'intensity' (number of votes in Hough Space)<br />
+descending and removing circles that fall within candidate circles with higher intensity</p>
+
+<p>7. Some false positives remained so after inspection, I realized the rate of change across slices<br />
+(different radii) of the Hough space is different for true circles vs. false matches. I checked the <br />
+rate of change of intensity at a given pixel (different radii) both 2 slices above and 2 slices below<br />
+the given candidate circle. If the difference is not large enough, the circle is a false positive.<br />
+All false positives were removed and only the remaining circles were the solution</p>
+
+<p>8. Paint detected cirlces over original image</p>
+
+<p></p>
+
+<p>.: REMARKS :.<br />
+=================================================<br />
+This project was A LOT of fun! It was also VERY challenging, but I am really happy with how it <br />
+turned out... </p>
+
+<p>I implemented a number of efficient data structures including a sparse edge list so that <br />
+the circles in the accumulator are filled per edge rather than needing to find the edges in the <br />
+edge image for each slice of the accumulator. </p>
+
+<p>I also found a significant improvement in performance by using flattened 1D arrays for the <br />
+accumulator and painting steps. Was tricky at first but led to significant improvement in speed.</p>
+
+<p>I struggled with false positives for way too many hours until I realized I needed to sort candidate <br />
+matches on descending intensity and invalidate circles that fall within those with higher intensity.<br />
+I recall Dr. Marais saying something to this effect but didn't see it described in any other resources.</p>
+
+<p>The final important optimization to resolve false positives was the rate of intensity check described <br />
+above which finally got me to perfect performance on the given images. I hope the performance is<br />
+as good on unseen images! </p>
+
+<p>
+.: FUTURE WORK :.<br />
+==============================================<br />
+1. Implement non-maximal supression and full Canny detector instead of just Sobel filter for edge detection</p>
+
+<p>2. Implement Gaussian blur to allow detection of imperfect circles, not just<br />
+those similar to the test image</p>
+
+<p>3. Implement parallelized accumulator search to speed up computation</p>
+
+<p>4. Show plot of accumulator intensity at given pixel across all slices (radii) </p>
+
+<p>:) :) :) :) :) :) :) :) :) :) :) :) :) :) :) :) ;)<br />
+</p>
+                    </div>
+                </div>
+                <!--  -->
+                <!--  -->
+                <!--  -->
+                <!--  -->
+            </div>
+        </div>
+    </div>
+    <!--External Libraries -->
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jquery-ui.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/crossfilter.v1.min.js"></script>
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/queue.js"></script>
+    <script src="js/nouislider.min.js"></script>
+    <!-- Hough Script -->
+    <script src="js/_helpers.js" defer></script>
+    <script src="js/_icv.js" defer></script>
+</body>
+
+</html>
